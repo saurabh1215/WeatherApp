@@ -6,15 +6,23 @@ const grantAccessContainer = document.querySelector(".grant-location-container")
 const searchForm = document.querySelector("[data-searchForm]");
 const loadingScreen = document.querySelector(".loading-container");
 const userInfoContainer = document.querySelector(".user-info-container");
+// const grantAccessBtn = document.querySelector("[data-grantAccess]");
+const messageText = document.querySelector("[data-messageText]");
+
+const apiErrorImg = document.querySelector("[data-notFoundImg]");
+
+const apiErrorMessage = document.querySelector("[data-apiErrorText]");
+const apiErrorBtn = document.querySelector("[data-apiErrorBtn]");
 
 //initially vairables need????
-
+const apiErrorContainer = document.querySelector(".api-error-container");
 let oldTab = userTab;
 const API_KEY = "d1845658f92b31c64bd94f06f7188c9c";
 oldTab.classList.add("current-tab");
 getfromSessionStorage();
 
 function switchTab(newTab) {
+    apiErrorContainer.classList.remove("active");
     if(newTab != oldTab) {
         oldTab.classList.remove("current-tab");
         oldTab = newTab;
@@ -47,6 +55,8 @@ searchTab.addEventListener("click", () => {
     switchTab(searchTab);
 });
 
+
+
 //check if cordinates are already present in session storage
 function getfromSessionStorage() {
     const localCoordinates = sessionStorage.getItem("user-coordinates");
@@ -59,7 +69,7 @@ function getfromSessionStorage() {
         fetchUserWeatherInfo(coordinates);
     }
 
-}
+} 
 
 async function fetchUserWeatherInfo(coordinates) {
     const {lat, lon} = coordinates;
@@ -82,6 +92,10 @@ async function fetchUserWeatherInfo(coordinates) {
     catch(err) {
         loadingScreen.classList.remove("active");
         //HW
+        apiErrorContainer.classList.add("active");
+      
+        apiErrorMessage.innerText = `${error?.message}`;
+        apiErrorBtn.addEventListener("click", fetchUserWeatherInfo);
 
     }
 
@@ -119,6 +133,9 @@ function getLocation() {
         navigator.geolocation.getCurrentPosition(showPosition);
     }
     else {
+        grantAccessBtn.style.display = "none";
+        messageText.innerText = "Geolocation is not supported by this browser.";
+      
         //HW - show an alert for no gelolocation support available
     }
 }
@@ -134,6 +151,23 @@ function showPosition(position) {
     fetchUserWeatherInfo(userCoordinates);
 
 }
+
+function showError(error) {
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        messageText.innerText = "You denied the request for Geolocation.";
+        break;
+      case error.POSITION_UNAVAILABLE:
+        messageText.innerText = "Location information is unavailable.";
+        break;
+      case error.TIMEOUT:
+        messageText.innerText = "The request to get user location timed out.";
+        break;
+      case error.UNKNOWN_ERROR:
+        messageText.innerText = "An unknown error occurred.";
+        break;
+    }
+  }
 
 const grantAccessButton = document.querySelector("[data-grantAccess]");
 grantAccessButton.addEventListener("click", getLocation);
@@ -154,17 +188,30 @@ async function fetchSearchWeatherInfo(city) {
     loadingScreen.classList.add("active");
     userInfoContainer.classList.remove("active");
     grantAccessContainer.classList.remove("active");
-
+    apiErrorContainer.classList.remove("active");
     try {
         const response = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`
           );
         const data = await response.json();
-        loadingScreen.classList.remove("active");
-        userInfoContainer.classList.add("active");
-        renderWeatherInfo(data);
+        if(data.cod==="404") {
+            loadingScreen.classList.remove("active");
+        apiErrorContainer.classList.add("active");
+        // apiErrorMessage.innerText = `${data.message}`;
+        apiErrorBtn.style.display = "none";
+    }
+        else {
+            loadingScreen.classList.remove("active");
+            userInfoContainer.classList.add("active");
+            renderWeatherInfo(data);
+        }
+        
     }
     catch(err) {
         //hW
+        loadingScreen.classList.remove("active");
+        apiErrorContainer.classList.add("active");
+    apiErrorMessage.innerText = `${error?.message}`;
+    apiErrorBtn.style.display = "none";
     }
 }
